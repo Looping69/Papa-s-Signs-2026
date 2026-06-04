@@ -75,10 +75,10 @@ const Gallery: React.FC = () => {
 
   const categories = ['All', 'Mining & Safety', 'Branding', 'Retail', 'Digital Print', 'Clothing'];
 
-  const galleryItems = images.filter(img => img.src?.trim());
+  const validGalleryItems = images.filter(img => img.src?.trim());
   const filteredImages = filter === 'All' 
-    ? galleryItems 
-    : galleryItems.filter(img => img.category === filter);
+    ? validGalleryItems 
+    : validGalleryItems.filter(img => img.category === filter);
 
   if (loading) {
     return (
