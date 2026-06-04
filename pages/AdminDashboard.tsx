@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchConfig, saveConfig, uploadImage, SiteConfig, GalleryImage, ServiceConfig } from "../services/configService";
+import { fetchConfig, saveConfig, uploadMedia, SiteConfig, GalleryImage, ServiceConfig } from "../services/configService";
 import { 
   Save, Upload, Plus, Trash2, CheckCircle, AlertCircle, 
   Image as ImageIcon, Layout, Settings, Grid, FileText, 
@@ -7,6 +7,11 @@ import {
 } from "lucide-react";
 
 type Tab = "overview" | "media" | "gallery" | "services";
+
+const VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+
+const getGalleryMediaType = (item: GalleryImage): "image" | "video" =>
+  item.mediaType === "video" || VIDEO_FILE_PATTERN.test(item.src) ? "video" : "image";
 
 const AdminDashboard: React.FC = () => {
   const [config, setConfig] = useState<SiteConfig | null>(null);
@@ -66,10 +71,11 @@ const AdminDashboard: React.FC = () => {
   const addGalleryItem = () => {
     if (!config) return;
     const newItem: GalleryImage = {
-      src: "https://picsum.photos/800/600",
-      title: "New Project",
+      src: "",
+      title: "",
       category: "Retail",
-      featured: false
+      featured: false,
+      mediaType: "image"
     };
     setConfig({ ...config, gallery: [...config.gallery, newItem] });
   };
@@ -84,7 +90,9 @@ const AdminDashboard: React.FC = () => {
     if (!config || !e.target.files?.[0]) return;
     try {
       setSaving(true);
-      const url = await uploadImage(e.target.files[0]);
+      const file = e.target.files[0];
+      const url = await uploadMedia(file);
+      const galleryMediaType: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
       
       if (target === "hero") {
         setConfig({
@@ -93,7 +101,7 @@ const AdminDashboard: React.FC = () => {
         });
       } else if (target.type === "gallery") {
         const newGallery = [...config.gallery];
-        newGallery[target.index] = { ...newGallery[target.index], src: url };
+        newGallery[target.index] = { ...newGallery[target.index], src: url, mediaType: galleryMediaType };
         setConfig({ ...config, gallery: newGallery });
       } else if (target.type === "service") {
         const newServices = [...config.services];
@@ -101,13 +109,26 @@ const AdminDashboard: React.FC = () => {
         setConfig({ ...config, services: newServices });
       }
       
-      setMessage({ type: "success", text: "Image uploaded successfully!" });
+      setMessage({ type: "success", text: "Media uploaded successfully!" });
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to upload image." });
+      setMessage({ type: "error", text: "Failed to upload media." });
     } finally {
       setSaving(false);
     }
   };
+
+  const renderGalleryMediaPreview = (item: GalleryImage, className: string) => (
+    getGalleryMediaType(item) === "video" ? (
+      <video
+        src={item.src}
+        className={className}
+        controls
+        preload="metadata"
+      />
+    ) : (
+      <img src={item.src} alt={item.title || "Gallery item"} className={className} />
+    )
+  );
 
   const handleSave = async () => {
     if (!config) return;
@@ -178,7 +199,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Content Area */}
         <div className="flex-1">
-          <h3 className="text-xl font-black text-brand-black mb-6">Active Images: {activeSelection?.label}</h3>
+          <h3 className="text-xl font-black text-brand-black mb-6">Active Media: {activeSelection?.label}</h3>
           
           <div className="space-y-6">
             {selectedPage === "home" ? (
@@ -201,20 +222,26 @@ const AdminDashboard: React.FC = () => {
 
                 {/* Home Gallery */}
                 <div className="grid grid-cols-1 gap-4">
-                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">Gallery Images</h4>
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">Gallery Media</h4>
                   {(config?.gallery || []).map((item, idx) => (
                     <div key={idx} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-6">
                       <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-gray-200 flex-shrink-0">
-                        <img src={item.src} alt={item.title} className="w-full h-full object-cover" />
+                        {item.src ? (
+                          renderGalleryMediaPreview(item, "w-full h-full object-cover")
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest text-center px-2">
+                            Upload media
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-bold text-gray-900 text-sm">{item.title}</h4>
+                        <h4 className="font-bold text-gray-900 text-sm">{item.title || "Untitled project"}</h4>
                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-tighter">{item.category}</p>
                         <div className="mt-3">
                           <label className="inline-flex items-center gap-2 bg-white text-brand-black px-3 py-1.5 rounded-lg text-[10px] font-black border border-gray-200 cursor-pointer hover:bg-gray-50 transition-all">
                             <Upload className="w-3 h-3" />
-                            Replace
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index: idx })} />
+                            Replace Media
+                            <input type="file" className="hidden" accept="image/*,video/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index: idx })} />
                           </label>
                         </div>
                       </div>
@@ -412,10 +439,16 @@ const AdminDashboard: React.FC = () => {
                     
                     <div className="flex gap-6">
                       <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-gray-200 flex-shrink-0 relative">
-                        <img src={item.src} alt="Gallery Item" className="w-full h-full object-cover" />
+                        {item.src ? (
+                          renderGalleryMediaPreview(item, "w-full h-full object-cover")
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest text-center px-2">
+                            Upload media
+                          </div>
+                        )}
                         <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                           <Upload className="w-6 h-6 text-white" />
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index })} />
+                          <input type="file" className="hidden" accept="image/*,video/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index })} />
                         </label>
                       </div>
                       
@@ -429,7 +462,7 @@ const AdminDashboard: React.FC = () => {
                             className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-brand-cyan outline-none"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Category</label>
                             <select
@@ -443,6 +476,12 @@ const AdminDashboard: React.FC = () => {
                               <option value="Digital Print">Digital Print</option>
                               <option value="Clothing">Clothing</option>
                             </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Media Type</label>
+                            <div className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold text-gray-600">
+                              {getGalleryMediaType(item)}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 pt-6">
                             <input
