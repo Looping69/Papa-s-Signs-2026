@@ -35,12 +35,7 @@ const DEFAULT_CONFIG = {
     { id: "02", title: "Fast Delivery", label: "Northern Cape Wide" },
     { id: "03", title: "Scale Experts", label: "Large Format Specialist" }
   ],
-  gallery: [
-    { src: 'https://picsum.photos/800/600?random=10', title: 'Shopfront Signage', category: 'Retail', featured: true },
-    { src: 'https://picsum.photos/600/800?random=11', title: 'Roll-up Banners', category: 'Digital Print' },
-    { src: 'https://picsum.photos/600/400?random=12', title: 'Mine Safety Signs', category: 'Mining & Safety' },
-    { src: 'https://picsum.photos/600/600?random=13', title: '3D Illuminated Letters', category: 'Branding' }
-  ],
+  gallery: [],
   services: [
     {
       id: 'advertising-signage',
@@ -109,7 +104,17 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error("Only image and video uploads are allowed."));
+  },
+});
 
 // API Routes
 app.get("/api/config", (req, res) => {
@@ -130,12 +135,19 @@ app.post("/api/config", (req, res) => {
   }
 });
 
-app.post("/api/upload", upload.single("image"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+app.post("/api/upload", (req, res) => {
+  upload.single("image")(req, res, (error) => {
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: imageUrl });
+  });
 });
 
 // Serve static files from public/uploads

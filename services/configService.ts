@@ -16,6 +16,7 @@ export interface GalleryImage {
   title: string;
   category: string;
   featured?: boolean;
+  mediaType?: "image" | "video";
 }
 
 export interface ServiceConfig {
@@ -54,7 +55,7 @@ export const saveConfig = async (config: SiteConfig): Promise<void> => {
   }
 };
 
-export const uploadImage = async (file: File): Promise<string> => {
+export const uploadMedia = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append("image", file);
 
@@ -64,9 +65,11 @@ export const uploadImage = async (file: File): Promise<string> => {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to upload image");
+    throw new Error("Failed to upload media");
   }
 
   const data = await response.json();
   return data.url;
 };
+
+export const uploadImage = uploadMedia;
