@@ -1,8 +1,10 @@
 import React from 'react';
+import { useSiteConfig } from './SiteConfigProvider';
 import { Facebook, Instagram, Twitter, MapPin, Phone, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
+  const {config}=useSiteConfig();
   return (
     <footer className="bg-black text-gray-500 pt-16 pb-8 border-t border-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,7 +30,7 @@ const Footer: React.FC = () => {
               <li><Link to="/about" className="hover:text-brand-cyan transition-colors">About Us</Link></li>
               <li><Link to="/services" className="hover:text-brand-cyan transition-colors">Services</Link></li>
               <li><Link to="/gallery" className="hover:text-brand-cyan transition-colors">Project Gallery</Link></li>
-              <li><Link to="/quote" className="hover:text-brand-cyan transition-colors">Request a Quote</Link></li>
+              {config?.quoteAssistant?.enabled===true&&<li><Link to="/quote" className="hover:text-brand-cyan transition-colors">Request a Quote</Link></li>}
             </ul>
           </div>
 

@@ -1,19 +1,27 @@
+// Author: Klaasvaakie ( |╲ )
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import cors from "cors";
+import { attachAdminApi, localManagement } from './server/adminApi';
+import { normalizeSiteConfig } from './shared/siteConfig';
+import { createAdminAuth, isPrivateRequest } from './server/adminAuth';
 import { fileURLToPath } from "url";
+import { papas26Gallery, serviceImages, siteImages } from "./data/papas26Assets";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 
-app.use(cors());
-app.use(express.json());
+app.use((req,res,next)=>{
+  if(isPrivateRequest(req.originalUrl)){res.status(404).end();return;}
+  next();
+});
+app.use(express.json({ limit: '2mb' }));
+const adminAuth=createAdminAuth({credentialFile:path.join(__dirname,'.private','admin-auth.local')});
+adminAuth.mount(app);
 
 // Ensure uploads directory exists
 const UPLOADS_DIR = path.join(__dirname, "public", "uploads");
@@ -28,69 +36,80 @@ const DEFAULT_CONFIG = {
     title: "PRINTING EXPERTISE",
     subtitle: "EXPERTISE",
     description: "Kuruman's premier signage manufacturing hub. Specialized for the Mining & Construction sectors with national compliance.",
-    backgroundImage: "https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&q=80"
+    backgroundImage: siteImages.hero
   },
   stats: [
     { id: "01", title: "Mine Compliance", label: "SABS Standards" },
     { id: "02", title: "Fast Delivery", label: "Northern Cape Wide" },
     { id: "03", title: "Scale Experts", label: "Large Format Specialist" }
   ],
-  gallery: [],
+  gallery: papas26Gallery,
   services: [
     {
       id: 'advertising-signage',
       title: 'Advertising & Signage',
       description: 'High-impact visibility solutions for businesses of all sizes.',
       icon: 'Store',
-      image: 'https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?auto=format&fit=crop&q=80'
+      image: serviceImages['advertising-signage']
     },
     {
       id: 'clothing-gifts',
       title: 'Clothing & Gifts',
       description: 'Branded apparel and custom gifts to build your brand identity.',
       icon: 'Shirt',
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80'
+      image: serviceImages['clothing-gifts']
     },
     {
       id: 'display-systems',
       title: 'Display Systems',
       description: 'Portable and professional display solutions for events.',
       icon: 'Layout',
-      image: 'https://images.unsplash.com/photo-1531050171669-0101272b1ee7?auto=format&fit=crop&q=80'
+      image: serviceImages['display-systems']
     },
     {
       id: 'digital-printing',
       title: 'Digital Printing',
       description: 'Precision paper and material printing for everyday business needs.',
       icon: 'Printer',
-      image: 'https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&q=80'
+      image: serviceImages['digital-printing']
     },
     {
       id: 'building-branding',
       title: 'Building Branding',
       description: 'Transform your premises into a powerful branding tool.',
       icon: 'Factory',
-      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80'
+      image: serviceImages['building-branding']
     },
     {
       id: 'road-safety',
       title: 'Road & Safety Signs',
       description: 'Compliant signage for mines, construction, and public roads.',
       icon: 'TriangleAlert',
-      image: 'https://images.unsplash.com/photo-1542362567-b054cd13bd18?auto=format&fit=crop&q=80'
+      image: serviceImages['road-safety']
     },
     {
       id: 'vehicle-branding',
       title: 'Vehicle Branding',
       description: 'Mobile advertising that travels wherever you do.',
       icon: 'Car',
-      image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80'
+      image: serviceImages['vehicle-branding']
     }
   ]
 };
 
 if (!fs.existsSync(CONFIG_FILE)) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
+} else {
+  try {
+    const currentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+    const hydratedConfig = normalizeSiteConfig(currentConfig, DEFAULT_CONFIG);
+
+    if (JSON.stringify(currentConfig) !== JSON.stringify(hydratedConfig)) {
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(hydratedConfig, null, 2));
+    }
+  } catch (error) {
+    console.warn("Unable to hydrate the existing site config with local portfolio assets.", error);
+  }
 }
 
 // Multer storage configuration
@@ -100,14 +119,16 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname).toLowerCase());
   },
 });
 
 const upload = multer({
   storage,
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if ((/^image\/(jpeg|png|webp|gif|avif)$/.test(file.mimetype) && ['.jpg','.jpeg','.png','.webp','.gif','.avif'].includes(ext)) || (/^video\/(mp4|webm|ogg|quicktime|x-m4v)$/.test(file.mimetype) && ['.mp4','.webm','.ogg','.mov','.m4v'].includes(ext))) {
       cb(null, true);
       return;
     }
@@ -116,26 +137,9 @@ const upload = multer({
   },
 });
 
-// API Routes
-app.get("/api/config", (req, res) => {
-  try {
-    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
-    res.json(config);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to read config" });
-  }
-});
+attachAdminApi(app, {configFile: CONFIG_FILE, publicDir: path.join(__dirname,'public'), defaults: DEFAULT_CONFIG, auth:adminAuth});
 
-app.post("/api/config", (req, res) => {
-  try {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(req.body, null, 2));
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to save config" });
-  }
-});
-
-app.post("/api/upload", (req, res) => {
+app.post("/api/upload", localManagement, adminAuth.requireSession, (req, res) => {
   upload.single("image")(req, res, (error) => {
     if (error) {
       return res.status(400).json({ error: error.message });
@@ -151,20 +155,31 @@ app.post("/api/upload", (req, res) => {
 });
 
 // Serve static files from public/uploads
-app.use("/uploads", express.static(UPLOADS_DIR));
+app.use("/uploads", express.static(UPLOADS_DIR, {
+  setHeaders: res => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  }
+}));
+
+app.use('/api', (error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!error) return next();
+  res.status(error.status === 413 ? 413 : 400).json({error: error.status === 413 ? 'Request is too large.' : 'Invalid API request.'});
+});
 
 // Vite middleware for development
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.argv.includes('--production')) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true,fs:{deny:['.env','.env.*','*.{crt,pem}','**/.git/**','**/.private/**','**/*.local','**/config.json*']} },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
     // In production, serve the built files
     app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (req, res) => {
+    app.get("/{*path}", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }

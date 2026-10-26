@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { SiteConfigProvider, useSiteConfig } from './components/SiteConfigProvider';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -12,6 +13,7 @@ import GalleryPage from './pages/GalleryPage';
 import QuotePage from './pages/QuotePage';
 import ContactPage from './pages/ContactPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminAccess from './components/admin/AdminAccess';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 
@@ -27,28 +29,22 @@ const ScrollToTop = () => {
 };
 
 const App: React.FC = () => {
-  useEffect(() => {
-    // Basic connectivity check for Gemini
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) {
-      console.warn("Gemini API Key is missing. The Chat Assistant will not function correctly.");
-    }
-  }, []);
-
   return (
-    <Router>
+    <SiteConfigProvider><Router>
       <AppContent />
-    </Router>
+    </Router></SiteConfigProvider>
   );
 };
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isQuotePage = location.pathname === '/quote';
+  const isAdmin = location.pathname === '/admin';
+  const {config,loading}=useSiteConfig();
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <Navbar />
+      {!isAdmin&&<Navbar />}
       <ScrollToTop />
       <main className="flex-grow">
         <Routes>
@@ -57,16 +53,16 @@ const AppContent: React.FC = () => {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:categoryId" element={<ServiceCategoryPage />} />
           <Route path="/gallery" element={<GalleryPage />} />
-          <Route path="/quote" element={<QuotePage />} />
+          <Route path="/quote" element={loading?<p role="status" className="pt-32 text-center">Checking availability…</p>:config?.quoteAssistant?.enabled===true?<QuotePage />:<Navigate to="/contact" replace/>} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminAccess>{(logout,active)=><AdminDashboard onLogout={logout} accessActive={active}/>}</AdminAccess>} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           {/* Fallback to Home */}
           <Route path="*" element={<Home />} />
         </Routes>
       </main>
-      {!isQuotePage && <Footer />}
+      {!isQuotePage && !isAdmin && <Footer />}
     </div>
   );
 };

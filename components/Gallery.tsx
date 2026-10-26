@@ -1,5 +1,7 @@
+// Author: Klaasvaakie ( |╲ )
 import React, { useState, useEffect } from 'react';
 import { fetchConfig, GalleryImage } from '../services/configService';
+import { galleryCategories } from '../data/papas26Assets';
 
 const VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
 
@@ -15,8 +17,8 @@ const LazyMedia: React.FC<GalleryMediaProps> = ({ item, isFeatured }) => {
   const isVideo = isVideoItem(item);
 
   return (
-    <div 
-      className={`relative group overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 ${
+    <div
+      className={`relative group overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 [content-visibility:auto] [contain-intrinsic-size:240px] ${
         isFeatured ? 'md:col-span-2 md:row-span-2' : ''
       }`}
     >
@@ -26,7 +28,7 @@ const LazyMedia: React.FC<GalleryMediaProps> = ({ item, isFeatured }) => {
           <div className="w-10 h-10 border-2 border-brand-cyan/20 border-t-brand-cyan rounded-full animate-spin"></div>
         </div>
       )}
-      
+
       {isVideo ? (
         <video
           src={item.src}
@@ -39,17 +41,19 @@ const LazyMedia: React.FC<GalleryMediaProps> = ({ item, isFeatured }) => {
           }`}
         />
       ) : (
-        <img 
-          src={item.src} 
-          alt={item.title || 'Gallery item'} 
+        <img
+          src={item.src}
+          alt={item.title || 'Gallery item'}
           loading="lazy"
           decoding="async"
+          sizes={isFeatured ? '(min-width: 1024px) 50vw, (min-width: 768px) 66vw, 100vw' : '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 100vw'}
           onLoad={() => setIsLoaded(true)}
           className={`w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
       )}
+
     </div>
   );
 };
@@ -73,11 +77,9 @@ const Gallery: React.FC = () => {
     loadConfig();
   }, []);
 
-  const categories = ['All', 'Mining & Safety', 'Branding', 'Retail', 'Digital Print', 'Clothing'];
-
   const validGalleryItems = images.filter(img => img.src?.trim());
-  const filteredImages = filter === 'All' 
-    ? validGalleryItems 
+  const filteredImages = filter === 'All'
+    ? validGalleryItems
     : validGalleryItems.filter(img => img.category === filter);
 
   if (loading) {
@@ -103,19 +105,25 @@ const Gallery: React.FC = () => {
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-4 scrollbar-hide">
-          {categories.map(cat => (
+          {galleryCategories.map(cat => {
+            const itemCount = cat === 'All'
+              ? validGalleryItems.length
+              : validGalleryItems.filter(item => item.category === cat).length;
+
+            return (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
-                filter === cat 
-                  ? 'bg-brand-cyan text-white shadow-lg shadow-brand-cyan/30 scale-105' 
+                filter === cat
+                  ? 'bg-brand-cyan text-white shadow-lg shadow-brand-cyan/30 scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {cat}
+              {cat} <span className="ml-1 opacity-60">{itemCount}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* Grid Container */}

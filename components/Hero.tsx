@@ -1,32 +1,20 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
-import { fetchConfig, SiteConfig } from '../services/configService';
+import { useSiteConfig } from './SiteConfigProvider';
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [config, setConfig] = useState<SiteConfig | null>(null);
+  const {config}=useSiteConfig();
   
   // Mouse tracking for parallax
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const springConfig = { damping: 25, stiffness: 150 };
   const mouseX = useSpring(0, springConfig);
   const mouseY = useSpring(0, springConfig);
-
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const data = await fetchConfig();
-        setConfig(data);
-      } catch (error) {
-        console.error("Failed to load hero config:", error);
-      }
-    };
-    loadConfig();
-  }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -197,7 +185,7 @@ const Hero: React.FC = () => {
               <motion.button 
                 whileHover={{ scale: 1.02, shadow: "0 0 30px rgba(0,174,239,0.4)" }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/quote')}
+                onClick={() => navigate(config?.quoteAssistant?.enabled===true?'/quote':'/contact')}
                 className="relative overflow-hidden bg-brand-cyan text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 group/btn"
               >
                 <motion.div 
@@ -207,7 +195,7 @@ const Hero: React.FC = () => {
                   className="absolute inset-0 bg-white/20 skew-x-12"
                 />
                 <Sparkles className="w-5 h-5 text-brand-yellow" />
-                Smart Quote Assistant
+                {config?.quoteAssistant?.enabled===true?'Smart Quote Assistant':'Request a Staff Quote'}
                 <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />
               </motion.button>
               

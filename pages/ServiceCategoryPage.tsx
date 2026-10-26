@@ -1,7 +1,9 @@
+// Author: Klaasvaakie ( |╲ )
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { fetchConfig, ServiceConfig } from '../services/configService';
 import { servicesData } from '../data/servicesData';
+import { useSiteConfig } from '../components/SiteConfigProvider';
 import { 
   ArrowLeft, 
   MessageCircle, 
@@ -16,6 +18,7 @@ const iconMap: Record<string, any> = {
 };
 
 const ServiceCategoryPage: React.FC = () => {
+  const {config:publishedConfig}=useSiteConfig();
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
   const [category, setCategory] = useState<any>(null);
@@ -63,7 +66,7 @@ const ServiceCategoryPage: React.FC = () => {
   }
 
   const handleQuote = (subTitle: string) => {
-    navigate('/quote', { state: { initialMessage: `${category.title} - ${subTitle}` } });
+    navigate(publishedConfig?.quoteAssistant?.enabled===true?'/quote':'/contact', { state: { initialMessage: `${category.title} - ${subTitle}` } });
   };
 
   const IconComponent = typeof category.icon === 'string' ? (iconMap[category.icon] || Store) : null;
@@ -172,8 +175,9 @@ const ServiceCategoryPage: React.FC = () => {
                     
                     <div className="relative z-10 overflow-hidden rounded-[2.5rem] shadow-2xl border border-gray-100">
                       <img 
-                        src={sub.image || `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800`} 
+                        src={publishedConfig?.images?.[`sub-${category.id}-${sub.id}`]||sub.image || category.image}
                         alt={sub.title} 
+                        loading="lazy"
                         className="w-full h-full aspect-[4/3] object-cover group-hover/image:scale-110 transition-transform duration-1000"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
@@ -289,11 +293,11 @@ const ServiceCategoryPage: React.FC = () => {
               </p>
               <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
                 <Link 
-                  to="/quote" 
+                  to={publishedConfig?.quoteAssistant?.enabled===true?'/quote':'/contact'}
                   state={{ initialMessage: category.title }}
                   className="w-full md:w-auto bg-brand-black text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-brand-cyan transition-all flex items-center justify-center gap-3 group"
                 >
-                  <MessageCircle className="w-6 h-6" /> Chat with Papa's Bot
+                  <MessageCircle className="w-6 h-6" /> {publishedConfig?.quoteAssistant?.enabled===true?"Chat with Papa's Bot":"Request a staff quote"}
                 </Link>
                 <Link 
                   to="/contact" 
