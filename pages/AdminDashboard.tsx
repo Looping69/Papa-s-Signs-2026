@@ -1,17 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { fetchConfig, saveConfig, uploadImage, SiteConfig, GalleryImage, ServiceConfig } from "../services/configService";
+import { createPortal } from 'react-dom';
+import MediaLibrary from '../components/admin/MediaLibrary';
+import QuoteSettingsEditor from '../components/admin/QuoteSettingsEditor';
+import { assignMedia, type MediaTarget, type MediaAsset } from '../shared/media';
+import { DEFAULT_QUOTE_SETTINGS } from '../shared/quote';
+import { imageSlots } from '../data/imageSlots';
+import { galleryCategories } from '../data/papas26Assets';
+import { fetchAdminConfig, saveConfig, SiteConfig, GalleryImage, ServiceConfig } from "../services/configService";
 import { 
   Save, Upload, Plus, Trash2, CheckCircle, AlertCircle, 
   Image as ImageIcon, Layout, Settings, Grid, FileText, 
   ChevronRight, Home, Briefcase, Info, Phone, ArrowLeft
 } from "lucide-react";
 
-type Tab = "overview" | "media" | "gallery" | "services";
+type Tab = "overview" | "media" | "gallery" | "services" | "library" | "slots" | "quotes";
 
-const AdminDashboard: React.FC = () => {
+const VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+
+const getGalleryMediaType = (item: GalleryImage): "image" | "video" =>
+  item.mediaType === "video" || VIDEO_FILE_PATTERN.test(item.src) ? "video" : "image";
+
+const AdminDashboard: React.FC<{onLogout?:()=>Promise<void>;accessActive:boolean}> = ({onLogout,accessActive}) => {
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [picker, setPicker] = useState<MediaTarget|null>(null);
+  const [slotSearch,setSlotSearch]=useState('');
+  const applyAsset=(asset:MediaAsset)=>{
+    if(!picker)return;
+    setConfig(current=>current?assignMedia(current,picker,asset):current);
+    setPicker(null);
+    setMessage({type:'success',text:'Image selected in draft. Save All Changes to publish.'});
+  };
+  const chooseButton=(target:MediaTarget,label='Choose from Library')=><button type="button" onClick={()=>setPicker(target)} className="inline-flex items-center gap-2 bg-white text-brand-black px-4 py-2 rounded-lg text-xs font-bold border border-gray-200 hover:border-brand-cyan"><ImageIcon className="w-4 h-4"/>{label}</button>;
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [selectedPage, setSelectedPage] = useState<string>("home");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -19,7 +40,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const data = await fetchConfig();
+        const data = await fetchAdminConfig();
         setConfig(data);
       } catch (error) {
         setMessage({ type: "error", text: "Failed to load configuration." });
@@ -66,10 +87,11 @@ const AdminDashboard: React.FC = () => {
   const addGalleryItem = () => {
     if (!config) return;
     const newItem: GalleryImage = {
-      src: "https://picsum.photos/800/600",
-      title: "New Project",
-      category: "Retail",
-      featured: false
+      src: "",
+      title: "",
+      category: "Storefront & Building Branding",
+      featured: false,
+      mediaType: "image"
     };
     setConfig({ ...config, gallery: [...config.gallery, newItem] });
   };
@@ -80,34 +102,19 @@ const AdminDashboard: React.FC = () => {
     setConfig({ ...config, gallery: newGallery });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: any) => {
-    if (!config || !e.target.files?.[0]) return;
-    try {
-      setSaving(true);
-      const url = await uploadImage(e.target.files[0]);
-      
-      if (target === "hero") {
-        setConfig({
-          ...config,
-          hero: { ...config.hero, backgroundImage: url },
-        });
-      } else if (target.type === "gallery") {
-        const newGallery = [...config.gallery];
-        newGallery[target.index] = { ...newGallery[target.index], src: url };
-        setConfig({ ...config, gallery: newGallery });
-      } else if (target.type === "service") {
-        const newServices = [...config.services];
-        newServices[target.index] = { ...newServices[target.index], image: url };
-        setConfig({ ...config, services: newServices });
-      }
-      
-      setMessage({ type: "success", text: "Image uploaded successfully!" });
-    } catch (error) {
-      setMessage({ type: "error", text: "Failed to upload image." });
-    } finally {
-      setSaving(false);
-    }
-  };
+
+  const renderGalleryMediaPreview = (item: GalleryImage, className: string) => (
+    getGalleryMediaType(item) === "video" ? (
+      <video
+        src={item.src}
+        className={className}
+        controls
+        preload="metadata"
+      />
+    ) : (
+      <img src={item.src} alt={item.title || "Gallery item"} className={className} />
+    )
+  );
 
   const handleSave = async () => {
     if (!config) return;
@@ -116,7 +123,7 @@ const AdminDashboard: React.FC = () => {
       await saveConfig(config);
       setMessage({ type: "success", text: "Configuration saved successfully!" });
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to save configuration." });
+      setMessage({ type: "error", text: (error as Error).message });
     } finally {
       setSaving(false);
     }
@@ -153,7 +160,7 @@ const AdminDashboard: React.FC = () => {
     const activeSelection = pages.find(p => p.id === selectedPage);
     
     return (
-      <div className="flex gap-8 h-full">
+      <div className="flex flex-col lg:flex-row gap-8 h-full">
         {/* Sub-sidebar for pages */}
         <div className="w-64 flex-shrink-0 space-y-2 border-r pr-6">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-2">Select Page/Service</h3>
@@ -178,7 +185,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Content Area */}
         <div className="flex-1">
-          <h3 className="text-xl font-black text-brand-black mb-6">Active Images: {activeSelection?.label}</h3>
+          <h3 className="text-xl font-black text-brand-black mb-6">Active Media: {activeSelection?.label}</h3>
           
           <div className="space-y-6">
             {selectedPage === "home" ? (
@@ -191,31 +198,29 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-900">Hero Background</h4>
                     <p className="text-xs text-gray-500 mb-4">Main landing page background image</p>
-                    <label className="inline-flex items-center gap-2 bg-white text-brand-black px-4 py-2 rounded-lg text-xs font-black border border-gray-200 cursor-pointer hover:bg-gray-50 transition-all">
-                      <Upload className="w-3 h-3" />
-                      Change Image
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, "hero")} />
-                    </label>
+                    {chooseButton({type:'hero'})}
                   </div>
                 </div>
 
                 {/* Home Gallery */}
                 <div className="grid grid-cols-1 gap-4">
-                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">Gallery Images</h4>
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">Gallery Media</h4>
                   {(config?.gallery || []).map((item, idx) => (
                     <div key={idx} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-6">
                       <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-gray-200 flex-shrink-0">
-                        <img src={item.src} alt={item.title} className="w-full h-full object-cover" />
+                        {item.src ? (
+                          renderGalleryMediaPreview(item, "w-full h-full object-cover")
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest text-center px-2">
+                            Upload media
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-bold text-gray-900 text-sm">{item.title}</h4>
+                        <h4 className="font-bold text-gray-900 text-sm">{item.title || "Untitled project"}</h4>
                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-tighter">{item.category}</p>
                         <div className="mt-3">
-                          <label className="inline-flex items-center gap-2 bg-white text-brand-black px-3 py-1.5 rounded-lg text-[10px] font-black border border-gray-200 cursor-pointer hover:bg-gray-50 transition-all">
-                            <Upload className="w-3 h-3" />
-                            Replace
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index: idx })} />
-                          </label>
+                          {chooseButton({type:'gallery',index:idx})}
                         </div>
                       </div>
                     </div>
@@ -237,11 +242,7 @@ const AdminDashboard: React.FC = () => {
                       <div className="flex-1">
                         <h4 className="font-bold text-gray-900">Main Service Image</h4>
                         <p className="text-xs text-gray-500 mb-4">Displayed on the services list and detail page</p>
-                        <label className="inline-flex items-center gap-2 bg-white text-brand-black px-4 py-2 rounded-lg text-xs font-black border border-gray-200 cursor-pointer hover:bg-gray-50 transition-all">
-                          <Upload className="w-3 h-3" />
-                          Change Image
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "service", index: serviceIndex })} />
-                        </label>
+                        {chooseButton({type:'service',index:serviceIndex!})}
                       </div>
                     </>
                   );
@@ -255,9 +256,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-50">
+      <aside className="lg:w-72 bg-white border-r border-gray-200 flex flex-col lg:fixed lg:inset-y-0 lg:left-0 z-40 lg:overflow-y-auto">
         <div className="p-8 border-b">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-8 h-8 bg-brand-cyan rounded-lg flex items-center justify-center">
@@ -268,11 +269,15 @@ const AdminDashboard: React.FC = () => {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Content Management System</p>
         </div>
 
-        <nav className="flex-1 p-6 space-y-2">
+        <nav className="flex-1 p-4 lg:p-6 grid grid-cols-2 lg:block gap-2 lg:space-y-2">
           <SidebarItem id="overview" label="Overview" icon={Layout} />
           <SidebarItem id="media" label="Media & Pages" icon={ImageIcon} />
+          <SidebarItem id="library" label="Media Library" icon={ImageIcon} />
+          <SidebarItem id="slots" label="All Page Images" icon={Layout} />
           <SidebarItem id="gallery" label="Gallery" icon={Grid} />
           <SidebarItem id="services" label="Services" icon={Briefcase} />
+          <SidebarItem id="quotes" label="Quote Assistant" icon={Settings} />
+          {onLogout&&<button onClick={()=>void onLogout()} className="w-full text-left px-4 py-3 rounded-xl font-bold text-red-600 hover:bg-red-50">Log out</button>}
           
           <div className="pt-8">
             <a 
@@ -298,7 +303,7 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-72 p-12">
+      <section aria-label="Admin content" className="flex-1 min-w-0 lg:ml-72 p-4 sm:p-8 lg:p-12">
         {message && (
           <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${
             message.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
@@ -309,6 +314,9 @@ const AdminDashboard: React.FC = () => {
         )}
 
         <div className="max-w-6xl mx-auto">
+          {activeTab==='library'&&<MediaLibrary/>}
+          {activeTab==='quotes'&&<div className="bg-white p-5 sm:p-8 rounded-2xl border"><QuoteSettingsEditor value={config?.quoteAssistant||DEFAULT_QUOTE_SETTINGS} onChange={value=>setConfig(current=>current?{...current,quoteAssistant:value}:current)}/></div>}
+          {activeTab==='slots'&&<div className="bg-white p-5 sm:p-8 rounded-2xl border space-y-5"><h2 className="font-black text-2xl">All Page Images</h2><p className="text-sm text-gray-500">Home, About and service-detail photographs. Hero and main service images are also in Media & Pages.</p><input aria-label="Search image destinations" placeholder="Search page or section…" value={slotSearch} onChange={e=>setSlotSearch(e.target.value)} className="border rounded-lg p-3 w-full text-sm"/><div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{imageSlots.filter(slot=>slot.label.toLowerCase().includes(slotSearch.toLowerCase())).map(slot=><div key={slot.key} className="border rounded-xl overflow-hidden"><img src={config?.images?.[slot.key]||slot.src} alt={slot.label} loading="lazy" className="aspect-video w-full object-cover"/><div className="p-4 space-y-3"><h3 className="font-bold text-sm">{slot.label}</h3>{chooseButton({type:'image',key:slot.key})}</div></div>)}</div></div>}
           {activeTab === "overview" && (
             <div className="space-y-8 animate-fade-in">
               <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
@@ -412,11 +420,14 @@ const AdminDashboard: React.FC = () => {
                     
                     <div className="flex gap-6">
                       <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-gray-200 flex-shrink-0 relative">
-                        <img src={item.src} alt="Gallery Item" className="w-full h-full object-cover" />
-                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                          <Upload className="w-6 h-6 text-white" />
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "gallery", index })} />
-                        </label>
+                        {item.src ? (
+                          renderGalleryMediaPreview(item, "w-full h-full object-cover")
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest text-center px-2">
+                            Upload media
+                          </div>
+                        )}
+                        <button aria-label={`Replace ${item.title||'gallery image'}`} onClick={()=>setPicker({type:'gallery',index})} className="absolute inset-0 bg-black/30 flex items-center justify-center hover:bg-black/50"><ImageIcon className="w-6 h-6 text-white"/></button>
                       </div>
                       
                       <div className="flex-1 space-y-4">
@@ -429,7 +440,7 @@ const AdminDashboard: React.FC = () => {
                             className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-brand-cyan outline-none"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           <div>
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Category</label>
                             <select
@@ -437,12 +448,14 @@ const AdminDashboard: React.FC = () => {
                               onChange={(e) => handleGalleryChange(index, "category", e.target.value)}
                               className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-brand-cyan outline-none"
                             >
-                              <option value="Mining & Safety">Mining & Safety</option>
-                              <option value="Branding">Branding</option>
-                              <option value="Retail">Retail</option>
-                              <option value="Digital Print">Digital Print</option>
-                              <option value="Clothing">Clothing</option>
+                              {Array.from(new Set([...galleryCategories.filter(category=>category!=='All'),...(config?.gallery||[]).map(item=>item.category)])).map(category=><option key={category} value={category}>{category}</option>)}
                             </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Media Type</label>
+                            <div className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold text-gray-600">
+                              {getGalleryMediaType(item)}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 pt-6">
                             <input
@@ -474,10 +487,7 @@ const AdminDashboard: React.FC = () => {
                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Service Image</label>
                         <div className="relative aspect-video rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-gray-200 group">
                           <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <Upload className="w-8 h-8 text-white" />
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, { type: "service", index })} />
-                          </label>
+                          <button aria-label={`Replace ${service.title} image`} onClick={()=>setPicker({type:'service',index})} className="absolute inset-0 bg-black/30 flex items-center justify-center hover:bg-black/50"><ImageIcon className="w-8 h-8 text-white"/></button>
                         </div>
                       </div>
                       <div className="md:col-span-2 space-y-6">
@@ -518,7 +528,8 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
+      </section>
+      {picker&&accessActive&&createPortal(<MediaLibrary title={`Choose media · ${picker.type==='hero'?'Hero background':picker.type==='image'?imageSlots.find(slot=>slot.key===picker.key)?.label||picker.key:picker.type==='service'?config?.services[picker.index]?.title:config?.gallery[picker.index]?.title||'Gallery item'}`} currentSrc={picker.type==='hero'?config?.hero.backgroundImage:picker.type==='image'?config?.images?.[picker.key]:picker.type==='service'?config?.services[picker.index]?.image:config?.gallery[picker.index]?.src} imagesOnly={picker.type!=='gallery'} onSelect={applyAsset} onClose={()=>setPicker(null)}/>,document.body)}
     </div>
   );
 };

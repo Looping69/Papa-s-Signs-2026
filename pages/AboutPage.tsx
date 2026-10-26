@@ -1,5 +1,8 @@
+// Author: Klaasvaakie ( |╲ )
 import React from 'react';
 import SchemaMarkup from '../components/SchemaMarkup';
+import { papas26Asset, siteImages as defaultImages } from '../data/papas26Assets';
+import { useSiteConfig } from '../components/SiteConfigProvider';
 import { 
   Users, 
   History, 
@@ -13,6 +16,8 @@ import {
 } from 'lucide-react';
 
 const AboutPage: React.FC = () => {
+  const {config}=useSiteConfig();
+  const siteImages={...defaultImages,...config?.images};
   const aboutSchema = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
@@ -57,7 +62,7 @@ const AboutPage: React.FC = () => {
       <section className="relative py-24 bg-brand-dark overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <img 
-            src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80" 
+            src={siteImages.aboutHero}
             className="w-full h-full object-cover" 
             alt="Workshop background" 
           />
@@ -88,27 +93,29 @@ const AboutPage: React.FC = () => {
               </p>
               <div className="flex items-center gap-6">
                 <div className="flex -space-x-4">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-12 h-12 rounded-full border-4 border-white overflow-hidden bg-gray-200">
-                      <img src={`https://i.pravatar.cc/150?u=${i}`} alt="Team member" />
+                  {[99, 119, 120, 128].map(projectNumber => (
+                    <div key={projectNumber} className="w-12 h-12 rounded-full border-4 border-white overflow-hidden bg-gray-200">
+                      <img src={config?.images?.[`about-team-${projectNumber}`]||papas26Asset(projectNumber)} alt={`Papa's Signs project ${projectNumber}`} loading="lazy" className="h-full w-full object-cover" />
                     </div>
                   ))}
                 </div>
                 <div>
-                  <p className="font-bold text-brand-black">Our Expert Team</p>
-                  <p className="text-sm text-gray-500">20+ years of collective experience</p>
+                  <p className="font-bold text-brand-black">Built by Our Local Team</p>
+                  <p className="text-sm text-gray-500">Real work delivered from Kuruman</p>
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <img 
-                src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80" 
-                alt="Production" 
+                src={siteImages.production}
+                alt="Papa's Signs team producing custom dimensional lettering"
+                loading="lazy"
                 className="rounded-3xl shadow-lg w-full h-64 object-cover"
               />
               <img 
-                src="https://images.unsplash.com/photo-1590402494682-cd3fb53b1f71?auto=format&fit=crop&q=80" 
-                alt="Installation" 
+                src={siteImages.installation}
+                alt="Completed retail storefront branding installation"
+                loading="lazy"
                 className="rounded-3xl shadow-lg w-full h-64 object-cover mt-12"
               />
             </div>
@@ -183,7 +190,7 @@ const AboutPage: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
-              href="/#/quote" 
+              href={config?.quoteAssistant?.enabled===true?'/#/quote':'/#/contact'}
               className="bg-brand-black px-10 py-5 rounded-2xl font-bold text-lg hover:bg-brand-magenta transition-all"
             >
               Get a Quote Now

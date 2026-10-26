@@ -11,6 +11,17 @@ node_modules
 dist
 dist-ssr
 *.local
+.private/
+.env
+.env.*
+!.env.example
+
+# Runtime settings, private working notes, and superseded local image backups
+/config.json
+/sani.md
+/.qa-*
+/migrated_prompt_history/
+/public/images/papas26/*.webp
 
 # Editor directories and files
 .vscode/*

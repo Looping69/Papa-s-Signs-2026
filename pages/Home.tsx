@@ -1,4 +1,4 @@
-
+// Author: Klaasvaakie ( |╲ )
 import React from 'react';
 import { motion } from 'motion/react';
 import Hero from '../components/Hero';
@@ -28,8 +28,12 @@ import {
   Monitor
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { siteImages as defaultImages } from '../data/papas26Assets';
+import { useSiteConfig } from '../components/SiteConfigProvider';
 
 const Home: React.FC = () => {
+  const {config}=useSiteConfig();
+  const siteImages={...defaultImages,...config?.images};
   const businessSchema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -37,7 +41,7 @@ const Home: React.FC = () => {
         "@type": "LocalBusiness",
         "name": "Papa's Signs",
         "description": "Kuruman's premier signage and printing specialists. Delivering excellence to the mining, construction, and retail sectors for over 15 years.",
-        "image": "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80",
+        "image": `${window.location.origin}${siteImages.hero}`,
         "telephone": "+27 53 712 3954",
         "email": "sales@papassigns.co.za",
         "address": {
@@ -176,7 +180,7 @@ const Home: React.FC = () => {
               transition={{ duration: 0.8 }}
             >
               <div className="space-y-4">
-                <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80" alt="Workshop" className="rounded-3xl shadow-xl w-full h-64 object-cover" />
+                <img src={siteImages.workshop} alt="Papa's Signs workshop team producing custom dimensional signage" loading="lazy" className="rounded-3xl shadow-xl w-full h-64 object-cover" />
                 <div className="bg-brand-dark p-8 rounded-3xl text-white">
                   <div className="text-4xl font-black mb-2">15+</div>
                   <div className="text-brand-cyan font-bold text-xs uppercase tracking-widest">Years of Mastery</div>
@@ -187,7 +191,7 @@ const Home: React.FC = () => {
                   <div className="text-4xl font-black mb-2">5k+</div>
                   <div className="text-white/80 font-bold text-xs uppercase tracking-widest">Projects Delivered</div>
                 </div>
-                <img src="https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?auto=format&fit=crop&q=80" alt="Signage" className="rounded-3xl shadow-xl w-full h-64 object-cover" />
+                <img src={siteImages.signatureSign} alt="Illuminated signage manufactured by Papa's Signs" loading="lazy" className="rounded-3xl shadow-xl w-full h-64 object-cover" />
               </div>
             </motion.div>
           </div>
@@ -216,8 +220,9 @@ const Home: React.FC = () => {
               viewport={{ once: true }}
             >
               <img 
-                src="https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80" 
-                alt="Large Format Printer" 
+                src={siteImages.largeFormat}
+                alt="Large-format mine safety notice board produced by Papa's Signs"
+                loading="lazy"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-12">
@@ -288,21 +293,21 @@ const Home: React.FC = () => {
                 title: "Mining & Industrial", 
                 desc: "Specialized safety signage, reflective vehicle decals, and heavy-duty site boards compliant with national mine safety standards.",
                 color: "bg-brand-yellow/10 text-brand-yellow",
-                image: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&q=80"
+                image: siteImages.mining
               },
               { 
                 icon: <Building2 className="w-10 h-10" />, 
                 title: "Corporate & Office", 
                 desc: "Professional indoor branding, sandblasted window films, 3D reception signs, and corporate identity stationery.",
                 color: "bg-brand-cyan/10 text-brand-cyan",
-                image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80"
+                image: siteImages.corporate
               },
               { 
                 icon: <ShoppingBag className="w-10 h-10" />, 
                 title: "Retail & Promotion", 
                 desc: "Vibrant shopfronts, lightboxes, pull-up banners, and promotional gifts designed to catch eyes and drive sales.",
                 color: "bg-brand-magenta/10 text-brand-magenta",
-                image: "https://images.unsplash.com/photo-1534452286302-2f5630f60391?auto=format&fit=crop&q=80"
+                image: siteImages.retail
               }
             ].map((v, i) => (
               <motion.div 
@@ -311,7 +316,7 @@ const Home: React.FC = () => {
                 variants={fadeIn}
               >
                 <div className="h-48 overflow-hidden">
-                  <img src={v.image} alt={v.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={v.image} alt={v.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 </div>
                 <div className="p-10">
                   <div className={`${v.color} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform`}>
@@ -452,7 +457,7 @@ const Home: React.FC = () => {
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80" 
+            src={siteImages.cta}
             alt="CTA Background" 
             className="w-full h-full object-cover opacity-10"
           />
@@ -474,10 +479,10 @@ const Home: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <Link 
-                to="/quote" 
+                to={config?.quoteAssistant?.enabled===true?'/quote':'/contact'}
                 className="w-full sm:w-auto bg-brand-cyan text-white px-12 py-6 rounded-2xl font-bold text-xl hover:bg-brand-magenta transition-all shadow-2xl shadow-brand-cyan/30 flex items-center justify-center gap-3 active:scale-95"
               >
-                Start Smart Quote <ArrowRight className="w-6 h-6" />
+                {config?.quoteAssistant?.enabled===true?'Start Smart Quote':'Request a Staff Quote'} <ArrowRight className="w-6 h-6" />
               </Link>
               <Link 
                 to="/gallery" 

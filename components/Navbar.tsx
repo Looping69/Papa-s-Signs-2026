@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import { Menu, X, Printer, Phone } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
+import { useSiteConfig } from './SiteConfigProvider';
 
 const Navbar: React.FC = () => {
+  const {config}=useSiteConfig();
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -12,7 +14,7 @@ const Navbar: React.FC = () => {
     { name: 'About', path: '/about' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Smart Quote', path: '/quote' },
-  ];
+  ].filter(link=>link.path!=='/quote'||config?.quoteAssistant?.enabled===true);
 
   const linkClasses = ({ isActive }: { isActive: boolean }) => 
     `relative font-bold transition-all duration-300 py-2 px-1 ${

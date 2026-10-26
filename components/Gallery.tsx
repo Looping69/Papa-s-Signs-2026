@@ -1,20 +1,24 @@
+// Author: Klaasvaakie ( |╲ )
 import React, { useState, useEffect } from 'react';
-import { fetchConfig, SiteConfig, GalleryImage } from '../services/configService';
+import { fetchConfig, GalleryImage } from '../services/configService';
+import { galleryCategories } from '../data/papas26Assets';
 
-interface GalleryImageProps {
-  src: string;
-  alt: string;
-  title: string;
-  category: string;
+const VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+
+const isVideoItem = (item: GalleryImage) => item.mediaType === 'video' || VIDEO_FILE_PATTERN.test(item.src);
+
+interface GalleryMediaProps {
+  item: GalleryImage;
   isFeatured?: boolean;
 }
 
-const LazyImage: React.FC<GalleryImageProps> = ({ src, alt, title, category, isFeatured }) => {
+const LazyMedia: React.FC<GalleryMediaProps> = ({ item, isFeatured }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const isVideo = isVideoItem(item);
 
   return (
-    <div 
-      className={`relative group overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 ${
+    <div
+      className={`relative group overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 [content-visibility:auto] [contain-intrinsic-size:240px] ${
         isFeatured ? 'md:col-span-2 md:row-span-2' : ''
       }`}
     >
@@ -24,21 +28,35 @@ const LazyImage: React.FC<GalleryImageProps> = ({ src, alt, title, category, isF
           <div className="w-10 h-10 border-2 border-brand-cyan/20 border-t-brand-cyan rounded-full animate-spin"></div>
         </div>
       )}
-      
-      <img 
-        src={src} 
-        alt={alt} 
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setIsLoaded(true)}
-        className={`w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-        <span className="text-brand-cyan text-sm font-bold tracking-wider uppercase">{category}</span>
-        <span className="text-white text-lg font-bold">{title}</span>
+
+      {isVideo ? (
+        <video
+          src={item.src}
+          aria-label={item.title || 'Gallery video'}
+          controls
+          preload="metadata"
+          onLoadedData={() => setIsLoaded(true)}
+          className={`w-full h-full object-cover transition-all duration-700 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      ) : (
+        <img
+          src={item.src}
+          alt={item.title || 'Gallery item'}
+          loading="lazy"
+          decoding="async"
+          sizes={isFeatured ? '(min-width: 1024px) 50vw, (min-width: 768px) 66vw, 100vw' : '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 100vw'}
+          onLoad={() => setIsLoaded(true)}
+          className={`w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 pt-16 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-cyan">{item.category}</p>
+        <p className="mt-1 text-sm font-bold leading-snug">{item.title}</p>
       </div>
     </div>
   );
@@ -63,11 +81,10 @@ const Gallery: React.FC = () => {
     loadConfig();
   }, []);
 
-  const categories = ['All', 'Mining & Safety', 'Branding', 'Retail', 'Digital Print', 'Clothing'];
-
-  const filteredImages = filter === 'All' 
-    ? images 
-    : images.filter(img => img.category === filter);
+  const validGalleryItems = images.filter(img => img.src?.trim());
+  const filteredImages = filter === 'All'
+    ? validGalleryItems
+    : validGalleryItems.filter(img => img.category === filter);
 
   if (loading) {
     return (
@@ -92,30 +109,33 @@ const Gallery: React.FC = () => {
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-4 scrollbar-hide">
-          {categories.map(cat => (
+          {galleryCategories.map(cat => {
+            const itemCount = cat === 'All'
+              ? validGalleryItems.length
+              : validGalleryItems.filter(item => item.category === cat).length;
+
+            return (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
-                filter === cat 
-                  ? 'bg-brand-cyan text-white shadow-lg shadow-brand-cyan/30 scale-105' 
+                filter === cat
+                  ? 'bg-brand-cyan text-white shadow-lg shadow-brand-cyan/30 scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {cat}
+              {cat} <span className="ml-1 opacity-60">{itemCount}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* Grid Container */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[240px]">
           {filteredImages.map((img, idx) => (
-            <LazyImage 
+            <LazyMedia
               key={`${img.src}-${idx}`}
-              src={img.src}
-              alt={img.title}
-              title={img.title}
-              category={img.category}
+              item={img}
               isFeatured={img.featured}
             />
           ))}
