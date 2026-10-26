@@ -54,10 +54,6 @@ const LazyMedia: React.FC<GalleryMediaProps> = ({ item, isFeatured }) => {
         />
       )}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 pt-16 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
-        <p className="text-xs font-bold uppercase tracking-widest text-brand-cyan">{item.category}</p>
-        <p className="mt-1 text-sm font-bold leading-snug">{item.title}</p>
-      </div>
     </div>
   );
 };
