@@ -3,6 +3,8 @@ import { LockKeyhole, ShieldCheck, LogIn } from 'lucide-react';
 interface Session {
   authenticated: boolean;
   setupRequired: boolean;
+  setupKeyRequired?: boolean;
+  mode?: 'cloud';
 }
 export default function AdminAccess({
   children
@@ -11,6 +13,7 @@ export default function AdminAccess({
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [entered, setEntered] = useState(false);
+  const [setupKey, setSetupKey] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] || '').get('setup') || '');
   const [password, setPassword] = useState(''),
     [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false),
@@ -36,6 +39,7 @@ export default function AdminAccess({
     }
   }, []);
   useEffect(() => {
+    if (window.location.hash.includes('setup=')) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/admin');
     void refresh();
     const expired = () => {
       setSession({
@@ -94,7 +98,7 @@ export default function AdminAccess({
         <LockKeyhole className="w-9 h-9 text-brand-cyan mb-5" />
         <p className="text-xs font-bold tracking-widest text-gray-500 mb-2">PAPA'S SIGNS · ADMIN</p>
         <h1 className="text-2xl font-black text-brand-black">{session?.setupRequired ? 'Set your admin password' : 'Admin sign in'}</h1>
-        <p className="mt-3 text-sm text-gray-500">{session?.setupRequired ? 'Create a private password of at least 14 characters. Only a salted password hash is stored on this computer.' : 'Enter your password to manage website content, images and quote controls.'}</p>
+        <p className="mt-3 text-sm text-gray-500">{session?.setupRequired ? 'Create a private password of at least 14 characters. Only a salted password hash is stored.' : 'Enter your password to manage website content, images and quote controls.'}</p>
         {expired && <p role="status" className="mt-4 p-3 bg-amber-50 text-amber-900 text-sm rounded-lg">Your session expired. Unsaved edits are kept in this tab; sign in again to continue.</p>}
         {error && <p role="alert" className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</p>}
         {!session ? <button onClick={() => {
@@ -115,7 +119,7 @@ export default function AdminAccess({
               body: JSON.stringify({
                 password,
                 ...(session.setupRequired ? {
-                  confirmPassword: confirm
+                  confirmPassword: confirm, setupKey
                 } : {})
               }),
               signal: AbortSignal.timeout(15000)
@@ -124,6 +128,7 @@ export default function AdminAccess({
             if (!response.ok) throw new Error(data.error || 'Unable to sign in.');
             setPassword('');
             setConfirm('');
+            setSetupKey('');
             await refresh();
           } catch (e) {
             setPassword('');
@@ -136,9 +141,10 @@ export default function AdminAccess({
         }}>
           <label className="block text-sm font-bold">Password<input required type="password" name="password" autoComplete={session.setupRequired ? 'new-password' : 'current-password'} minLength={session.setupRequired ? 14 : 1} maxLength={256} value={password} onChange={e => setPassword(e.target.value)} disabled={busy} className="block w-full mt-2 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-cyan" /></label>
           {session.setupRequired && <label className="block text-sm font-bold">Confirm password<input required type="password" name="confirmPassword" autoComplete="new-password" minLength={14} maxLength={256} value={confirm} onChange={e => setConfirm(e.target.value)} disabled={busy} className="block w-full mt-2 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-cyan" /></label>}
+          {session.setupKeyRequired && <label className="block text-sm font-bold">Private setup code<input required type="password" autoComplete="off" value={setupKey} onChange={e=>setSetupKey(e.target.value)} disabled={busy} className="block w-full mt-2 p-3 border border-gray-300 rounded-xl" /><span className="text-xs font-normal text-gray-500">Use your private setup link or paste the code from the local setup file.</span></label>}
           <button disabled={busy} className="w-full inline-flex items-center justify-center gap-2 bg-brand-black text-white rounded-xl px-5 py-3 font-bold disabled:opacity-50"><LogIn className="w-4 h-4" />{busy ? 'Please wait…' : session.setupRequired ? 'Create password & sign in' : 'Sign in'}</button>
         </form>}
-        <p className="mt-6 text-xs text-gray-500 flex items-start gap-2"><ShieldCheck className="w-4 h-4 flex-shrink-0" />Local access only. Sessions expire after eight hours or a server restart.</p>
+        <p className="mt-6 text-xs text-gray-500 flex items-start gap-2"><ShieldCheck className="w-4 h-4 flex-shrink-0" />{session?.mode === 'cloud' ? 'Secure online access. Sessions expire after eight hours. First-time setup requires your private setup code.' : 'Local access only. Sessions expire after eight hours or a server restart.'}</p>
         <a href="/#/" className="inline-block mt-6 text-sm font-bold text-brand-cyan">Back to website</a>
       </div>
     </section>}

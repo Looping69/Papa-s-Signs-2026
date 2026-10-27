@@ -1,5 +1,3 @@
-
-
 # Papa's Signs
 
 React/Vite website with an Express content-management backend, reusable media library, password-protected local administration, and server-calculated provisional quotes.
@@ -31,4 +29,4 @@ Settings (`config.json`), uploaded files (`public/uploads/`), and password hashe
 
 Administration intentionally remains restricted to loopback access. A public reverse proxy must not be used to bypass that guard. Remote admin access, HTTPS/proxy trust and storage must be explicitly designed for the selected host before claiming production readiness. Do not publish a development server or copy a local password hash into Git.
 
-See [admin access and recovery](docs/admin-access.md) and [API contracts](docs/api/admin-controls.md). No deployment provider, domain, or automatic deployment workflow is configured in this repository.
+The Vercel deployment uses a separate durable cloud API; see [Vercel deployment and private admin setup](docs/vercel-deployment.md). The local mode above retains its loopback-only security boundary. See also [local admin access and recovery](docs/admin-access.md) and [API contracts](docs/api/admin-controls.md).
