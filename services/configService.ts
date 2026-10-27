@@ -29,6 +29,7 @@ export interface ServiceConfig {
 }
 
 export interface SiteConfig {
+  _revision?: number;
   hero: HeroConfig;
   stats: StatConfig[];
   gallery: GalleryImage[];
@@ -56,7 +57,7 @@ export const fetchAdminConfig=async():Promise<SiteConfig>=>{
   return response.json();
 };
 
-export const saveConfig = async (config: SiteConfig): Promise<void> => {
+export const saveConfig = async (config: SiteConfig): Promise<number | undefined> => {
   const response = await adminRequest("/api/config", {
     method: "POST",
     headers: {
@@ -68,10 +69,22 @@ export const saveConfig = async (config: SiteConfig): Promise<void> => {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.error || "Failed to save config");
   }
+  const saved = await response.json();
   window.dispatchEvent(new Event('site-config-saved'));
+  return typeof saved.revision === 'number' ? saved.revision : undefined;
 };
 
 export const uploadMedia = async (file: File): Promise<string> => {
+  const mode = await adminRequest('/api/media/upload-mode');
+  const provider = mode.ok ? (await mode.json()).provider : undefined;
+  if (mode.ok && provider === 'blob') {
+    if (file.size > 20 * 1024 * 1024) throw new Error('Media must be at most 20 MiB.');
+    const { upload } = await import('@vercel/blob/client');
+    const filename = file.name.replace(/[^a-zA-Z0-9_.-]/g, '-').replace(/\.(?=.*\.)/g, '-').slice(-120);
+    const blob = await upload(`uploads/${crypto.randomUUID()}-${filename}`, file, {access:'public',handleUploadUrl:'/api/upload',contentType:file.type});
+    return blob.url;
+  }
+  if ((!mode.ok && mode.status !== 404) || (mode.ok && provider !== 'local')) throw new Error('Please sign in before uploading.');
   const formData = new FormData();
   formData.append("image", file);
 

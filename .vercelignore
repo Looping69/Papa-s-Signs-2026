@@ -1,0 +1,13 @@
+.private
+.env*
+config.json
+sani.md
+migrated_prompt_history
+.agents
+skills-lock.json
+tests
+docs
+node_modules
+.git
+*.log
+public/images/papas26/*.webp

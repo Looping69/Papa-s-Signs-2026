@@ -8,7 +8,7 @@ import type { AdminAuth } from './adminAuth';
 
 import { localManagement } from './localManagement';
 export { localManagement } from './localManagement';
-function validateConfig(value: any) {
+export function validateConfig(value: any) {
   if (!value || typeof value !== 'object' || !value.hero || typeof value.hero.title !== 'string' || typeof value.hero.backgroundImage !== 'string' || !Array.isArray(value.stats) || !Array.isArray(value.gallery) || !Array.isArray(value.services) || value.gallery.length > 5000 || value.services.length > 100) throw new Error('Invalid site configuration.');
   const imageUrl = (src: any) => typeof src === 'string' && (src === '' || /^\/(images|uploads)\/[A-Za-z0-9_./% -]+$/.test(src) && !src.includes('..') || /^https:\/\//i.test(src));
   if (!imageUrl(value.hero.backgroundImage) || value.gallery.some((row: any) => !imageUrl(row?.src)) || value.services.some((row: any) => !imageUrl(row?.image)) || value.images && (typeof value.images !== 'object' || Array.isArray(value.images) || Object.values(value.images).some(src => !imageUrl(src)))) throw new Error('Use supported public image URLs.');
@@ -26,6 +26,7 @@ export function attachAdminApi(app: Express, {
   auth: AdminAuth;
 }) {
   const read = () => normalizeSiteConfig(JSON.parse(fs.readFileSync(configFile, 'utf8')), defaults);
+  app.get('/api/media/upload-mode',localManagement,auth.requireSession,(_req,res)=>res.json({provider:'local'}));
   app.get('/api/config', (_req, res) => {
     try {
       const config=read();

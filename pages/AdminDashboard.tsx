@@ -120,7 +120,8 @@ const AdminDashboard: React.FC<{onLogout?:()=>Promise<void>;accessActive:boolean
     if (!config) return;
     try {
       setSaving(true);
-      await saveConfig(config);
+      const revision = await saveConfig(config);
+      if (revision !== undefined) setConfig(current => current ? {...current,_revision:revision} : current);
       setMessage({ type: "success", text: "Configuration saved successfully!" });
     } catch (error) {
       setMessage({ type: "error", text: (error as Error).message });
