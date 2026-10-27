@@ -52,3 +52,9 @@ node --env-file=.env.cloud.local --import tsx --test tests/cloud-api.test.ts
 It checks guarded setup, concurrent setup, durable sessions across app instances, save persistence, stale-save rejection, cross-origin denial, staff-required calculations, login throttling and logout. It clears only its own test tables. The ordinary suite skips this opt-in test.
 
 Stage production with `vercel deploy --prod --skip-domain --scope loop69 --yes`; check actual API JSON, static assets, unauthorized denials and admin UI before promoting that exact deployment. Keep deployment protection enabled. Rollback switches code/domain assignment only; it does not roll back database edits or uploaded media.
+
+## Dependency audit (2026-10-27)
+
+Compatible security updates remove the reported critical/high findings, including patched Express dependencies, protobuf and React Router 6 patches. Vercel CLI configuration's pinned Zod dependency is overridden with patched Zod 4.6.6 or newer and exercised through real Blob integration tests.
+
+Residual advisories: two moderate React Router 6 findings (backslash redirect and SSR hydration); this app uses internal route destinations and no SSR hydration. The registry's proposed complete fix is a breaking Router 7 upgrade, deliberately not bundled into this deployment repair. A low-severity esbuild Windows development-server advisory remains in tsx's tooling dependency; no esbuild development server is exposed by the cloud API. These are residual audit findings, not a claim of zero vulnerabilities. Reassess on dependency updates or before adding user-controlled navigation/SSR.

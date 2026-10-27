@@ -9,8 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts"
-    ,"test:cloud-runtime": "tsc -p tsconfig.cloud.json && node .qa-cloud-build/api/index.js"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:cloud-runtime": "tsc -p tsconfig.cloud.json && node .qa-cloud-build/api/index.js"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
@@ -27,8 +27,11 @@
     "pg": "^8.23.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "6.22.0",
+    "react-router-dom": "^6.30.6",
     "tsx": "^4.21.0"
+  },
+  "overrides": {
+    "@vercel/cli-config": {"zod": "^4.6.6"}
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
