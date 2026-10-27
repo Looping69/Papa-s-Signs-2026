@@ -1,7 +1,7 @@
 import type { Express, Request, Response, RequestHandler } from 'express';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import type { CloudStore } from './store';
-import { isTrustedManagement } from './policy';
+import { isTrustedManagement } from './policy.js';
 
 export const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const COOKIE = 'papas_cloud_admin';

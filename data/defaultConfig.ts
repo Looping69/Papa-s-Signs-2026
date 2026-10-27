@@ -1,5 +1,5 @@
-import { papas26Gallery, serviceImages, siteImages } from './papas26Assets';
-import { normalizeSiteConfig } from '../shared/siteConfig';
+import { papas26Gallery, serviceImages, siteImages } from './papas26Assets.js';
+import { normalizeSiteConfig } from '../shared/siteConfig.js';
 
 export const defaultConfig = normalizeSiteConfig({}, {
   hero: {title: 'PRINTING EXPERTISE', subtitle: 'EXPERTISE', description: "Kuruman's premier signage manufacturing hub. Specialized for the Mining & Construction sectors with national compliance.", backgroundImage: siteImages.hero},

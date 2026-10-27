@@ -10,4 +10,5 @@ docs
 node_modules
 .git
 *.log
+.qa-*
 public/images/papas26/*.webp

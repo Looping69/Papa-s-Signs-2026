@@ -2,12 +2,11 @@ import express from 'express';
 import { list } from '@vercel/blob';
 import { handleUpload } from '@vercel/blob/client';
 import { randomUUID } from 'node:crypto';
-import { createCloudStore, type CloudStore } from './store';
-import { createCloudAuth, clientKey } from './auth';
-import { validateConfig } from '../adminApi';
-import { normalizeSiteConfig } from '../../shared/siteConfig';
-import { defaultConfig } from '../../data/defaultConfig';
-import { calculateEstimate, validateQuoteSettings } from '../../shared/quote';
+import { createCloudStore, type CloudStore } from './store.js';
+import { createCloudAuth, clientKey } from './auth.js';
+import { validateConfig, normalizeSiteConfig } from '../../shared/siteConfig.js';
+import { defaultConfig } from '../../data/defaultConfig.js';
+import { calculateEstimate, validateQuoteSettings } from '../../shared/quote.js';
 import type { MediaAsset } from '../../shared/media';
 
 export function createCloudApp(store: CloudStore, hosts: string[]) {

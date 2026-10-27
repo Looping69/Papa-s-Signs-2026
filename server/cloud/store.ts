@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { attachDatabasePool } from '@vercel/functions';
-import { normalizeSiteConfig } from '../../shared/siteConfig';
-import { defaultConfig } from '../../data/defaultConfig';
+import { normalizeSiteConfig } from '../../shared/siteConfig.js';
+import { defaultConfig } from '../../data/defaultConfig.js';
 
 export function createCloudStore(connectionString: string, schema = 'papas') {
   if (!/^[a-z_]+$/.test(schema)) throw new Error('Invalid database namespace');

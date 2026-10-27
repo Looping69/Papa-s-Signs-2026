@@ -40,6 +40,7 @@ Existing API contracts in `docs/api/admin-controls.md` remain valid for local mo
 npm test
 npm run lint
 npm run build
+npm run test:cloud-runtime
 ```
 
 Real database integration test uses the isolated `papas_cloud_test` schema, not production configuration or real administrator credentials. In PowerShell set `$env:PAPAS_CLOUD_TEST='1'`, then run:

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {"noEmit": false, "allowImportingTsExtensions": false, "outDir": ".qa-cloud-build"},
+  "include": ["api/index.ts", "server/cloud/**/*.ts"],
+  "exclude": ["node_modules", ".qa-cloud-build"]
+}
